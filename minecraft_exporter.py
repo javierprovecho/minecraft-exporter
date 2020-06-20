@@ -16,6 +16,7 @@ class MinecraftCollector(object):
         self.playerdirectory = "/world/playerdata"
         self.advancementsdirectory = "/world/advancements"
         self.betterquesting = "/world/betterquesting"
+        self.usernamecachepath = "/usernamecache.json"
         self.map = dict()
         self.questsEnabled = False
         self.rcon = None
@@ -35,10 +36,18 @@ class MinecraftCollector(object):
         uuid = uuid.replace('-','')
         if uuid in self.map:
             return self.map[uuid]
-        else:
+        elif 'MODE' in os.environ and os.environ['MODE'] == 'offline':
+            with open(self.usernamecachepath) as json_file:
+                data = json.load(json_file)
+                json_file.close()
+            for old_uuid in [x for x in data]:
+                data[old_uuid.replace('-', '')] = data.pop(old_uuid)
+            self.map[uuid] = data[uuid]
+            return self.map[uuid]
+        else: 
             result = requests.get('https://api.mojang.com/user/profiles/'+uuid+'/names')
             self.map[uuid] = result.json()[-1]['name']
-            return(result.json()[-1]['name'])
+            return self.map[uuid]
 
     def rcon_command(self,command):
         if self.rcon == None:
